@@ -1,0 +1,2 @@
+playwright==1.47.0
+jpholiday==0.1.10
