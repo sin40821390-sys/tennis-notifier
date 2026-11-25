@@ -27,6 +27,7 @@ from playwright.sync_api import sync_playwright
 
 # ===== 共通設定 =====
 EVENING_START_HOUR = 18   # ケース2: この時刻以降に「開始」する枠を対象にする
+MIN_SLOT_HOURS = 2        # これより短い枠（冬の1時間枠など）は通知しない
 STATE_FILE = Path(__file__).with_name("state.json")
 WEEKDAYS = "月火水木金土日"
 JST = dt.timezone(dt.timedelta(hours=9))
@@ -107,7 +108,11 @@ def fetch_tokyo(page) -> list[dict]:
     found = {}
     for week in range(TOKYO_MAX_WEEKS):
         cells = page.evaluate(TOKYO_PARSE_JS)
+        # 表の行（開始時刻）の並びから各枠の長さを求める（次の行の開始時刻 − この行の開始時刻）
+        starts = sorted({hm_to_float(c["label"]) for c in cells})
+        dur = {s: (starts[i + 1] - s if i + 1 < len(starts) else 2) for i, s in enumerate(starts)}
         for c in cells:
+            c["dur"] = dur.get(hm_to_float(c["label"]), 2)
             if c["status"] == "空き":
                 found[c["id"]] = c
         if week > 0 and cells and all(c["status"] == "受付期間外" for c in cells):
@@ -127,7 +132,7 @@ def fetch_tokyo(page) -> list[dict]:
     for sid, c in found.items():
         d = dt.datetime.strptime(sid.split("_")[0], "%Y%m%d").date()
         h = hm_to_float(c["label"])
-        out.append(slot("tokyo", "浮間公園 テニス（人工芝）", d, h, h + 2,
+        out.append(slot("tokyo", "浮間公園 テニス（人工芝）", d, h, h + c["dur"],
                         f"空き{c['count']}面" if c["count"] else ""))
     return out
 
@@ -298,6 +303,8 @@ FETCHERS = {"tokyo": fetch_tokyo, "kita": fetch_kita, "itabashi": fetch_itabashi
 def matches(s: dict) -> bool:
     d = s["date"]
     if d < jst_today():
+        return False
+    if s["end"] - s["start"] < MIN_SLOT_HOURS - 0.01:   # 1時間枠などの短い枠は除外
         return False
     return d.weekday() >= 5 or jpholiday.is_holiday(d) or s["start"] >= EVENING_START_HOUR
 
