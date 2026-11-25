@@ -342,13 +342,17 @@ def format_section(slots: list[dict]) -> str:
     return "\n".join(lines)
 
 
-def build_mail(new: list[dict], still: list[dict], errors: list[str]) -> str:
+def build_mail(new: list[dict], still: list[dict], errors: list[str], stale: dict) -> str:
     body = f"■ 新しい空き（{len(new)}件）\n\n{format_section(new)}\n"
     body += f"■ 以前通知済みで、まだ空いている枠（{len(still)}件）\n\n{format_section(still)}\n"
+    if stale:
+        body += "※ 次のサイトは今回確認していないため、前回確認時点の情報です\n"
+        body += "\n".join(f"  {SITE_LABEL[k]}: {v or '不明'} 時点" for k, v in stale.items()) + "\n\n"
     if errors:
         body += "■ 今回確認できなかったサイト\n" + "\n".join(f"  {e}" for e in errors) + "\n\n"
     body += "■ 予約サイト\n" + "\n".join(f"  {SITE_LABEL[k]}: {v}" for k, v in SITE_LINK.items())
-    body += f"\n\n通知条件: 土日祝は全時間帯 / 平日は{EVENING_START_HOUR}時以降に開始する枠\n"
+    body += (f"\n\n通知条件: 土日祝は全時間帯 / 平日は{EVENING_START_HOUR}時以降に開始する枠"
+             f"（{MIN_SLOT_HOURS}時間未満の枠は除外）\n")
     return body
 
 
@@ -365,58 +369,96 @@ def send_mail(subject: str, body: str) -> None:
         s.send_message(msg)
 
 
+def to_json(s: dict) -> dict:
+    return {**s, "date": s["date"].isoformat()}
+
+
+def from_json(s: dict) -> dict:
+    return {**s, "date": dt.date.fromisoformat(s["date"])}
+
+
 def load_state() -> dict:
+    """{site: {"checked_at": "MM/DD HH:MM", "slots": [...], "keys": [...]}} を返す"""
     if not STATE_FILE.exists():
         return {}
     data = json.loads(STATE_FILE.read_text())
-    return data if isinstance(data, dict) else {}   # 旧形式（リスト）は破棄
+    if not isinstance(data, dict):
+        return {}
+    state = {}
+    for site, v in data.items():
+        if isinstance(v, list):          # 旧形式（通知済みキーのみ）
+            state[site] = {"checked_at": None, "slots": [], "keys": v}
+        else:
+            state[site] = {"checked_at": v.get("checked_at"),
+                           "slots": [from_json(x) for x in v.get("slots", [])],
+                           "keys": []}
+    return state
 
 
 def main() -> int:
-    state = load_state()                 # {site: [通知済みキー, ...]}
-    new_state, targets, errors = {}, [], []
+    # 確認するサイト（環境変数 SITES。例: "tokyo"。未指定または "all" なら全サイト）
+    req = os.environ.get("SITES", "all").strip()
+    run_sites = list(FETCHERS) if req in ("", "all") else [x.strip() for x in req.split(",")]
+    print(f"今回確認するサイト: {', '.join(run_sites)}")
+
+    state = load_state()
+    now = dt.datetime.now(JST).strftime("%m/%d %H:%M")
+    new_state, fresh, carried, errors, stale = {}, [], [], [], {}
 
     with sync_playwright() as p:
         browser = p.chromium.launch()
         for site, fetch in FETCHERS.items():
+            prev = state.get(site, {"checked_at": None, "slots": [], "keys": []})
             result = None
-            for attempt in range(3):     # サイトが時々エラーを返すので最大3回
-                ctx = browser.new_context(locale="ja-JP")
-                page = ctx.new_page()
-                page.set_default_timeout(60_000)
-                page.on("dialog", lambda d: d.accept())
-                try:
-                    result = fetch(page)
-                    break
-                except Exception:
-                    print(f"[{site}] 取得失敗 ({attempt + 1}/3)", file=sys.stderr)
-                    traceback.print_exc()
-                    time.sleep(20)
-                finally:
-                    ctx.close()
+            if site in run_sites:
+                for attempt in range(3):     # サイトが時々エラーを返すので最大3回
+                    ctx = browser.new_context(locale="ja-JP")
+                    page = ctx.new_page()
+                    page.set_default_timeout(60_000)
+                    page.on("dialog", lambda d: d.accept())
+                    try:
+                        result = fetch(page)
+                        break
+                    except Exception:
+                        print(f"[{site}] 取得失敗 ({attempt + 1}/3)", file=sys.stderr)
+                        traceback.print_exc()
+                        time.sleep(20)
+                    finally:
+                        ctx.close()
+                if result is None:
+                    errors.append(f"{SITE_LABEL[site]}（エラーのため取得できず）")
+
             if result is None:
-                errors.append(f"{SITE_LABEL[site]}（エラーのため取得できず）")
-                new_state[site] = state.get(site, [])   # 前回の記録を引き継ぐ
+                # 今回確認しなかった／できなかったサイトは前回の結果をそのまま引き継ぐ
+                keep = [s for s in prev["slots"] if matches(s)]
+                carried += keep
+                if keep:
+                    stale[site] = prev["checked_at"]
+                new_state[site] = {"checked_at": prev["checked_at"],
+                                   "slots": [to_json(s) for s in keep]}
                 continue
+
             hits = [s for s in result if matches(s)]
             print(f"[{site}] 空き {len(result)} 件 / 条件一致 {len(hits)} 件")
-            targets += hits
-            new_state[site] = sorted({key(s) for s in hits})
+            fresh += hits
+            new_state[site] = {"checked_at": now, "slots": [to_json(s) for s in hits]}
         browser.close()
 
-    notified = {k for keys in state.values() for k in keys}
-    new = [s for s in targets if key(s) not in notified]
-    still = [s for s in targets if key(s) in notified]
+    notified = {key(s) for v in state.values() for s in v["slots"]}
+    notified |= {k for v in state.values() for k in v["keys"]}
+    new = [s for s in fresh if key(s) not in notified]
+    still = [s for s in fresh if key(s) in notified] + carried
     print(f"新規 {len(new)} 件 / 継続 {len(still)} 件")
 
     if new:
-        body = build_mail(new, still, errors)
+        body = build_mail(new, still, errors, stale)
         print(body)
         send_mail(f"【テニス空き通知】新しい空き {len(new)}件", body)
         print("メール送信しました")
 
     STATE_FILE.write_text(json.dumps(new_state, ensure_ascii=False, indent=1))
-    return 1 if len(errors) == len(FETCHERS) else 0
+    requested = [s for s in run_sites if s in FETCHERS]
+    return 1 if requested and len(errors) == len(requested) else 0
 
 
 if __name__ == "__main__":
