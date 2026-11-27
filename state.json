@@ -1,10 +1,10 @@
 {
  "tokyo": {
-  "checked_at": "11/27 18:45",
+  "checked_at": "11/27 19:59",
   "slots": []
  },
  "kita": {
-  "checked_at": "11/27 18:45",
+  "checked_at": "11/27 19:59",
   "slots": [
    {
     "site": "kita",
@@ -45,19 +45,11 @@
     "start": 9,
     "end": 11,
     "note": ""
-   },
-   {
-    "site": "kita",
-    "place": "新河岸川庭球場 B面ハード",
-    "date": "2026-12-19",
-    "start": 7,
-    "end": 9,
-    "note": ""
    }
   ]
  },
  "itabashi": {
-  "checked_at": "11/27 18:45",
+  "checked_at": "11/27 19:59",
   "slots": [
    {
     "site": "itabashi",
