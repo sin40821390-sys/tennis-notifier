@@ -1,14 +1,23 @@
 {
  "tokyo": {
-  "checked_at": "11/28 14:05",
+  "checked_at": "11/28 15:38",
   "slots": []
  },
  "kita": {
-  "checked_at": "11/28 14:05",
-  "slots": []
+  "checked_at": "11/28 15:38",
+  "slots": [
+   {
+    "site": "kita",
+    "place": "新河岸川庭球場 C面ハード",
+    "date": "2026-12-06",
+    "start": 13,
+    "end": 15,
+    "note": ""
+   }
+  ]
  },
  "itabashi": {
-  "checked_at": "11/28 14:05",
+  "checked_at": "11/28 15:38",
   "slots": [
    {
     "site": "itabashi",
