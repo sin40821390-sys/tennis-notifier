@@ -1,24 +1,23 @@
 {
  "tokyo": {
-  "checked_at": "11/28 15:38",
+  "checked_at": "11/28 17:18",
   "slots": []
  },
  "kita": {
-  "checked_at": "11/28 15:38",
-  "slots": [
-   {
-    "site": "kita",
-    "place": "新河岸川庭球場 C面ハード",
-    "date": "2026-12-06",
-    "start": 13,
-    "end": 15,
-    "note": ""
-   }
-  ]
+  "checked_at": "11/28 17:18",
+  "slots": []
  },
  "itabashi": {
-  "checked_at": "11/28 15:38",
+  "checked_at": "11/28 17:18",
   "slots": [
+   {
+    "site": "itabashi",
+    "place": "小豆沢庭球場 Ａ面（ナイター設備あり）",
+    "date": "2027-02-06",
+    "start": 13.0,
+    "end": 15.0,
+    "note": ""
+   },
    {
     "site": "itabashi",
     "place": "新河岸庭球場 ５面",
