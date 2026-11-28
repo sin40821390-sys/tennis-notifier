@@ -1,55 +1,14 @@
 {
  "tokyo": {
-  "checked_at": "11/27 23:24",
+  "checked_at": "11/28 09:31",
   "slots": []
  },
  "kita": {
-  "checked_at": "11/27 23:24",
-  "slots": [
-   {
-    "site": "kita",
-    "place": "新河岸川庭球場 B面ハード",
-    "date": "2026-12-05",
-    "start": 7,
-    "end": 9,
-    "note": ""
-   },
-   {
-    "site": "kita",
-    "place": "新河岸川庭球場 B面ハード",
-    "date": "2026-12-06",
-    "start": 7,
-    "end": 9,
-    "note": ""
-   },
-   {
-    "site": "kita",
-    "place": "新河岸川庭球場 B面ハード",
-    "date": "2026-12-12",
-    "start": 7,
-    "end": 9,
-    "note": ""
-   },
-   {
-    "site": "kita",
-    "place": "新河岸川庭球場 B面ハード",
-    "date": "2026-12-13",
-    "start": 7,
-    "end": 9,
-    "note": ""
-   },
-   {
-    "site": "kita",
-    "place": "新河岸川庭球場 B面ハード",
-    "date": "2026-12-13",
-    "start": 9,
-    "end": 11,
-    "note": ""
-   }
-  ]
+  "checked_at": "11/28 09:31",
+  "slots": []
  },
  "itabashi": {
-  "checked_at": "11/27 23:24",
+  "checked_at": "11/28 09:31",
   "slots": [
    {
     "site": "itabashi",
