@@ -1,10 +1,10 @@
 {
  "tokyo": {
-  "checked_at": "11/28 18:33",
+  "checked_at": "11/28 19:55",
   "slots": []
  },
  "kita": {
-  "checked_at": "11/28 18:33",
+  "checked_at": "11/28 19:55",
   "slots": [
    {
     "site": "kita",
@@ -17,7 +17,7 @@
   ]
  },
  "itabashi": {
-  "checked_at": "11/28 18:33",
+  "checked_at": "11/28 19:55",
   "slots": [
    {
     "site": "itabashi",
